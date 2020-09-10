@@ -194,24 +194,30 @@ int main()
 	glDeleteShader(shaders_res.vertex_shader);
 	glDeleteShader(shaders_res.fragment_shader);
 
-	// Set fragment shader color
-	GLuint tColor = glGetUniformLocation(shaders_res.shader_program, "TColor");
-	std::cout << tColor << std::endl << std::endl;
-
 	// Render stuff
 	GLfloat vertices[]{
-			-.3f, .3f, 0,
-			-.6f, .9f, 0,
-			-.6f, -.3f, 0,
-			0, -.3f, 0,
-			.6f, -.3f, 0,
-			.3f, .3f, 0,
+			// positions	// colors
+			-.3f, .3f, 0,	1.0f, 0.0f, 0.0f,
+			-.6f, .9f, 0,	0.0f, 1.0f, 0.0f,
+			-.6f, -.3f, 0,	0.0f, 0.0f, 1.0f,
+			0, -.3f, 0,		1.0f, 0.0f, 1.0f,
+			.6f, -.3f, 0,	1.0f, 1.0f, 0.0f,
+			.3f, .3f, 0,	0.0f, 1.0f, 1.0f,
 	};
 	GLuint indices[]{
 		1, 2, 3,
 		3, 4, 5,
 		0, 3, 5,
 	};
+	//GLfloat vertices[]{
+	//	// positions	// colors
+	//	.0f, .4f, 0,	1.0f, 0.0f, 0.0f,
+	//	-.3464f, -.2f, 0,	0.0f, 1.0f, 0.0f,
+	//	.3464f, -.2f, 0,	0.0f, 0.0f, 1.0f,
+	//};
+	//GLuint indices[]{
+	//	0, 1, 2,
+	//};
 
 	// Set Virtual Array Object
 	GLuint VAO;
@@ -222,8 +228,10 @@ int main()
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	// Specify what the data in this VBO means. (Set vertex attributes)
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);	// Normalized
-	glEnableVertexAttribArray(0);	// #0 attritbute stores the vertice positions
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)0);	// positions #0
+	glEnableVertexAttribArray(0);	
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));	// colors #1
+	glEnableVertexAttribArray(1);
 	GLuint EBO;
 	glGenBuffers(1, &EBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
@@ -236,6 +244,13 @@ int main()
 
 	// Polygon mode
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	// Set fragment shader color
+	GLuint colorModF = glGetUniformLocation(shaders_res.shader_program, "ColorModF");
+	GLuint offsetF = glGetUniformLocation(shaders_res.shader_program, "offsetF");
+	//std::cout << colorModF << std::endl;
+	// Use the shader program
+	glUseProgram(shaders_res.shader_program);
 
 	auto t_start = std::chrono::high_resolution_clock::now();
 	// Render loop
@@ -250,9 +265,10 @@ int main()
 		float x = sin(time * 3.0f);
 		float y = sin(time * 2.0f);
 		float z = sin(time * 1.0f);
-		glUniform3f(tColor, x/2.0f + 0.5f, y/2.0f + 0.5f, z / 2.0f + 0.5f);
 
-		glUseProgram(shaders_res.shader_program);
+		//glUniform3f(tColor, x / 2.0f + 0.5f, y / 2.0f + 0.5f, z / 2.0f + 0.5f);
+		glUniform1f(colorModF, x / 2.0f + 0.5f);
+		glUniform1f(offsetF, y / 4.0f + 0.25f);
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0);
 
