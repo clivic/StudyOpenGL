@@ -3,6 +3,8 @@
 #include <iostream>
 #include <fstream>
 #include <chrono>    
+#include <algorithm>
+#include "stb_image.h"
 
 // Callbacks
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
@@ -175,6 +177,32 @@ init_shaders_res init_shaders(void)
 	}
 }
 
+void setVisibility(float* visibility, float newAmt)
+{
+	if (visibility == NULL)return;
+	float lo(0), hi(1);
+	*visibility = (newAmt < lo) ? lo : (hi < newAmt) ? hi : newAmt;
+	std::cout << "visibility: " << *visibility << std::endl;
+}
+
+void processInput(GLFWwindow *window, float * visibility)
+{
+	int altL = glfwGetKey(window, GLFW_KEY_LEFT_ALT);
+	int altR = glfwGetKey(window, GLFW_KEY_RIGHT_ALT);
+	int f4 = glfwGetKey(window, GLFW_KEY_F4);
+	int upArrow = glfwGetKey(window, GLFW_KEY_UP);
+	int dnArrow = glfwGetKey(window, GLFW_KEY_DOWN);
+
+	if ((altL == GLFW_PRESS || altR == GLFW_PRESS) && f4 == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, true);
+	if (upArrow == GLFW_PRESS) {
+		setVisibility(visibility, *visibility - 0.01f);
+	}
+	else if (dnArrow == GLFW_PRESS) {
+		setVisibility(visibility, *visibility + 0.01f);
+	}
+}
+
 int main()
 {
 	// Init
@@ -195,29 +223,75 @@ int main()
 	glDeleteShader(shaders_res.fragment_shader);
 
 	// Render stuff
-	GLfloat vertices[]{
-			// positions	// colors
-			-.3f, .3f, 0,	1.0f, 0.0f, 0.0f,
-			-.6f, .9f, 0,	0.0f, 1.0f, 0.0f,
-			-.6f, -.3f, 0,	0.0f, 0.0f, 1.0f,
-			0, -.3f, 0,		1.0f, 0.0f, 1.0f,
-			.6f, -.3f, 0,	1.0f, 1.0f, 0.0f,
-			.3f, .3f, 0,	0.0f, 1.0f, 1.0f,
-	};
-	GLuint indices[]{
-		1, 2, 3,
-		3, 4, 5,
-		0, 3, 5,
-	};
 	//GLfloat vertices[]{
-	//	// positions	// colors
-	//	.0f, .4f, 0,	1.0f, 0.0f, 0.0f,
-	//	-.3464f, -.2f, 0,	0.0f, 1.0f, 0.0f,
-	//	.3464f, -.2f, 0,	0.0f, 0.0f, 1.0f,
+	//		// positions	// colors
+	//		-.3f, .3f, 0,	1.0f, 0.0f, 0.0f,
+	//		-.6f, .9f, 0,	0.0f, 1.0f, 0.0f,
+	//		-.6f, -.3f, 0,	0.0f, 0.0f, 1.0f,
+	//		0, -.3f, 0,		1.0f, 0.0f, 1.0f,
+	//		.6f, -.3f, 0,	1.0f, 1.0f, 0.0f,
+	//		.3f, .3f, 0,	0.0f, 1.0f, 1.0f,
 	//};
 	//GLuint indices[]{
-	//	0, 1, 2,
+	//	1, 2, 3,
+	//	3, 4, 5,
+	//	0, 3, 5,
 	//};
+	GLfloat vertices[]{
+		// positions		// colors				// texs
+		.3f, .3f, 0,		0.0f, 0.0f, 1.0f,		2.0f, 2.0f,
+		.3f, -.3f, 0,		1.0f, 0.0f, 0.0f,		2.0f, 0.0f,
+		-.3f, -.3f, 0,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,
+		-.3f, .3f, 0,		0.0f, 0.0f, 1.0f,		0.0f, 2.0f,
+	};
+	GLuint indices[]{
+		0, 1, 2,
+		0, 2, 3,
+	};
+
+	
+	// Create texture
+	GLuint gorgeousImgs[2];
+	glGenTextures(2, gorgeousImgs);
+	int width, height, nrChannels;
+	unsigned char *img_data(NULL);
+	// Read texture
+	// Texture #1
+	glBindTexture(GL_TEXTURE_2D, gorgeousImgs[0]);
+	// Set options
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	stbi_set_flip_vertically_on_load(true);
+	img_data = stbi_load("ping.png", &width, &height, &nrChannels, 0);
+	printf("first imge: width: %d, height: %d, nrChannels: %d", width, height, nrChannels);
+	if (img_data == NULL) {
+		std::cout << "Fuck. Can't load first img." << std::endl;
+		return -1;
+	}
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	stbi_image_free(img_data);	// Free the memory of the texture read
+	// Texture #2
+	glBindTexture(GL_TEXTURE_2D, gorgeousImgs[1]);
+	// Set options
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	img_data = stbi_load("awesomeface.png", &width, &height, &nrChannels, 0);
+	printf("second imge: width: %d, height: %d, nrChannels: %d", width, height, nrChannels);
+	if (img_data == NULL) {
+		std::cout << "Fuck. Can't load second img." << std::endl;
+		return -1;
+	}
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	stbi_image_free(img_data);	// Free the memory of the texture read
+	
+	// Unbind texture
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	// Set Virtual Array Object
 	GLuint VAO;
@@ -228,10 +302,12 @@ int main()
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	// Specify what the data in this VBO means. (Set vertex attributes)
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)0);	// positions #0
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);	// positions #0
 	glEnableVertexAttribArray(0);	
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));	// colors #1
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));	// colors #1
 	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));	// texs #2
+	glEnableVertexAttribArray(2);
 	GLuint EBO;
 	glGenBuffers(1, &EBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
@@ -248,17 +324,30 @@ int main()
 	// Set fragment shader color
 	GLuint colorModF = glGetUniformLocation(shaders_res.shader_program, "ColorModF");
 	GLuint offsetF = glGetUniformLocation(shaders_res.shader_program, "offsetF");
-	//std::cout << colorModF << std::endl;
+	GLuint visibleAmtF = glGetUniformLocation(shaders_res.shader_program, "visibleAmtF");
 	// Use the shader program
 	glUseProgram(shaders_res.shader_program);
 
+	// Set sampler uniforms (Must set uniforms AFTER using shader programs)
+	glUniform1i(glGetUniformLocation(shaders_res.shader_program, "TexImg0"), 0);
+	glUniform1i(glGetUniformLocation(shaders_res.shader_program, "TexImg1"), 1);
+
 	auto t_start = std::chrono::high_resolution_clock::now();
+	float visibility(.25f);
 	// Render loop
 	while (!glfwWindowShouldClose(window)) {
+
+		// input
+		processInput(window, &visibility);
 
 		// rendering
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, gorgeousImgs[0]);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, gorgeousImgs[1]);
 
 		auto t_now = std::chrono::high_resolution_clock::now();
 		float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
@@ -266,11 +355,14 @@ int main()
 		float y = sin(time * 2.0f);
 		float z = sin(time * 1.0f);
 
-		//glUniform3f(tColor, x / 2.0f + 0.5f, y / 2.0f + 0.5f, z / 2.0f + 0.5f);
-		glUniform1f(colorModF, x / 2.0f + 0.5f);
-		glUniform1f(offsetF, y / 4.0f + 0.25f);
+		//glUniform1f(colorModF, x / 2.0f + 0.5f);
+		//glUniform1f(offsetF, y / 4.0f + 0.25f);
+		glUniform1f(colorModF, 1.0f);
+		glUniform1f(offsetF, 0.0f);
+		glUniform1f(visibleAmtF, visibility);
 		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0);
+		
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		// check and call events and swap the buffers
 		glfwSwapBuffers(window);
@@ -282,3 +374,5 @@ int main()
 	glfwTerminate();
 	return 0;
 }
+
+

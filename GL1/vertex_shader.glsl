@@ -1,9 +1,11 @@
 #version 330 core
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aCol;
+layout (location = 2) in vec2 aTex;
 
 uniform float offsetF;
 out vec4 VertexColor;
+out vec2 TexCoord;
 
 void main()
 {
@@ -11,4 +13,7 @@ void main()
 
    // Color
    VertexColor = vec4(aCol, 1.0);
+
+   // Tex Coordinates
+   TexCoord = aTex;
 }
