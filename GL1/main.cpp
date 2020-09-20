@@ -5,6 +5,9 @@
 #include <chrono>    
 #include <algorithm>
 #include "stb_image.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 // Callbacks
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
@@ -239,10 +242,10 @@ int main()
 	//};
 	GLfloat vertices[]{
 		// positions		// colors				// texs
-		.3f, .3f, 0,		0.0f, 0.0f, 1.0f,		2.0f, 2.0f,
-		.3f, -.3f, 0,		1.0f, 0.0f, 0.0f,		2.0f, 0.0f,
+		.3f, .3f, 0,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,
+		.3f, -.3f, 0,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f,
 		-.3f, -.3f, 0,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,
-		-.3f, .3f, 0,		0.0f, 0.0f, 1.0f,		0.0f, 2.0f,
+		-.3f, .3f, 0,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f,
 	};
 	GLuint indices[]{
 		0, 1, 2,
@@ -321,9 +324,14 @@ int main()
 	// Polygon mode
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+	// Transform using matrix
+	glm::mat4 trans = glm::mat4(1.0f);
+	
+
 	// Set fragment shader color
 	GLuint colorModF = glGetUniformLocation(shaders_res.shader_program, "ColorModF");
-	GLuint offsetF = glGetUniformLocation(shaders_res.shader_program, "offsetF");
+	GLuint transformLoc = glGetUniformLocation(shaders_res.shader_program, "transform");
+	//GLuint offsetF = glGetUniformLocation(shaders_res.shader_program, "offsetF");
 	GLuint visibleAmtF = glGetUniformLocation(shaders_res.shader_program, "visibleAmtF");
 	// Use the shader program
 	glUseProgram(shaders_res.shader_program);
@@ -355,13 +363,23 @@ int main()
 		float y = sin(time * 2.0f);
 		float z = sin(time * 1.0f);
 
-		//glUniform1f(colorModF, x / 2.0f + 0.5f);
-		//glUniform1f(offsetF, y / 4.0f + 0.25f);
 		glUniform1f(colorModF, 1.0f);
-		glUniform1f(offsetF, 0.0f);
 		glUniform1f(visibleAmtF, visibility);
 		glBindVertexArray(VAO);
-		
+
+		//1
+		trans = glm::mat4(1.0f);
+		trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0));
+		trans = glm::rotate(trans, time, glm::vec3(0.0, 0.0, 1.0));
+		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+		//2
+		trans = glm::mat4(1.0f); // reset it to identity matrix
+		trans = glm::translate(trans, glm::vec3(-0.5f, 0.5f, 0.0f));
+		float scaleAmount = std::abs(cos(time));
+		trans = glm::scale(trans, glm::vec3(scaleAmount, scaleAmount, scaleAmount));
+		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		// check and call events and swap the buffers
