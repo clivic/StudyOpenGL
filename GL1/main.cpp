@@ -206,6 +206,41 @@ void processInput(GLFWwindow *window, float * visibility)
 	}
 }
 
+bool createTexture(char const * img_name, GLuint texobj_id )
+{
+	glBindTexture(GL_TEXTURE_2D, texobj_id);
+	// Set options
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	unsigned char *img_data(NULL);
+	int width, height, nrChannels;
+	stbi_set_flip_vertically_on_load(true);
+	img_data = stbi_load(img_name, &width, &height, &nrChannels, 0);
+	printf("image \"%s\": width: %d, height: %d, nrChannels: %d", img_name, width, height, nrChannels);
+	if (img_data == NULL) {
+		std::cout << "Fuck. Can't load image \""<< img_name << "\"." << std::endl;
+		return GL_FALSE;
+	}
+
+	// which format?
+	GLint format;
+	char const * r_png = strstr(img_name, ".png");
+	if (r_png != nullptr) {
+		format = GL_RGBA;
+	}
+	else {
+		format = GL_RGB;
+	}
+	glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, img_data);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	stbi_image_free(img_data);	// Free the memory of the texture read
+	glBindTexture(GL_TEXTURE_2D, 0);
+	return GL_TRUE;
+}
+
 int main()
 {
 	// Init
@@ -225,21 +260,6 @@ int main()
 	glDeleteShader(shaders_res.vertex_shader);
 	glDeleteShader(shaders_res.fragment_shader);
 
-	// Render stuff
-	//GLfloat vertices[]{
-	//		// positions	// colors
-	//		-.3f, .3f, 0,	1.0f, 0.0f, 0.0f,
-	//		-.6f, .9f, 0,	0.0f, 1.0f, 0.0f,
-	//		-.6f, -.3f, 0,	0.0f, 0.0f, 1.0f,
-	//		0, -.3f, 0,		1.0f, 0.0f, 1.0f,
-	//		.6f, -.3f, 0,	1.0f, 1.0f, 0.0f,
-	//		.3f, .3f, 0,	0.0f, 1.0f, 1.0f,
-	//};
-	//GLuint indices[]{
-	//	1, 2, 3,
-	//	3, 4, 5,
-	//	0, 3, 5,
-	//};
 	GLfloat vertices[]{
 		// positions		// colors				// texs
 		.3f, .3f, 0,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,
@@ -251,51 +271,14 @@ int main()
 		0, 1, 2,
 		0, 2, 3,
 	};
-
 	
 	// Create texture
 	GLuint gorgeousImgs[2];
 	glGenTextures(2, gorgeousImgs);
-	int width, height, nrChannels;
-	unsigned char *img_data(NULL);
 	// Read texture
-	// Texture #1
-	glBindTexture(GL_TEXTURE_2D, gorgeousImgs[0]);
-	// Set options
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	stbi_set_flip_vertically_on_load(true);
-	img_data = stbi_load("ping.png", &width, &height, &nrChannels, 0);
-	printf("first imge: width: %d, height: %d, nrChannels: %d", width, height, nrChannels);
-	if (img_data == NULL) {
-		std::cout << "Fuck. Can't load first img." << std::endl;
-		return -1;
-	}
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	stbi_image_free(img_data);	// Free the memory of the texture read
-	// Texture #2
-	glBindTexture(GL_TEXTURE_2D, gorgeousImgs[1]);
-	// Set options
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	img_data = stbi_load("awesomeface.png", &width, &height, &nrChannels, 0);
-	printf("second imge: width: %d, height: %d, nrChannels: %d", width, height, nrChannels);
-	if (img_data == NULL) {
-		std::cout << "Fuck. Can't load second img." << std::endl;
-		return -1;
-	}
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	stbi_image_free(img_data);	// Free the memory of the texture read
+	createTexture("ping.png", gorgeousImgs[0]);
+	createTexture("awesomeface.png", gorgeousImgs[1]);
 	
-	// Unbind texture
-	glBindTexture(GL_TEXTURE_2D, 0);
-
 	// Set Virtual Array Object
 	GLuint VAO;
 	glGenVertexArrays(1, &VAO);
@@ -315,30 +298,27 @@ int main()
 	glGenBuffers(1, &EBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
 	// Unbind
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-	// Polygon mode
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
 	// Transform using matrix
 	glm::mat4 trans = glm::mat4(1.0f);
-	
 
-	// Set fragment shader color
+	// Uniforms
 	GLuint colorModF = glGetUniformLocation(shaders_res.shader_program, "ColorModF");
 	GLuint transformLoc = glGetUniformLocation(shaders_res.shader_program, "transform");
-	//GLuint offsetF = glGetUniformLocation(shaders_res.shader_program, "offsetF");
 	GLuint visibleAmtF = glGetUniformLocation(shaders_res.shader_program, "visibleAmtF");
-	// Use the shader program
+	// Use the shader program (Have to use the program before setting the uniforms)
 	glUseProgram(shaders_res.shader_program);
 
 	// Set sampler uniforms (Must set uniforms AFTER using shader programs)
 	glUniform1i(glGetUniformLocation(shaders_res.shader_program, "TexImg0"), 0);
 	glUniform1i(glGetUniformLocation(shaders_res.shader_program, "TexImg1"), 1);
+
+	// Polygon mode
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	auto t_start = std::chrono::high_resolution_clock::now();
 	float visibility(.25f);
