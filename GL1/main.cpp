@@ -9,6 +9,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+// Constants
+float const WINDOW_WIDTH(1920);
+float const WINDOW_HEIGHT(1080);
+
 // Callbacks
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
@@ -36,7 +40,7 @@ init_res init(void)
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// Create a window
-	res.window = glfwCreateWindow(1920, 1080, "Clarence's awesome game", NULL, NULL);
+	res.window = glfwCreateWindow(static_cast<int>(WINDOW_WIDTH), static_cast<int>(WINDOW_HEIGHT), "Clarence's awesome game", NULL, NULL);
 	if (res.window == NULL) {
 		res.err_str = "window is null";
 		glfwTerminate();
@@ -57,6 +61,9 @@ init_res init(void)
 
 	// Register callbacks
 	glfwSetFramebufferSizeCallback(res.window, framebufferSizeCallback);
+
+	// Enable depth buffer
+	glEnable(GL_DEPTH_TEST);
 
 	res.err_str = "";
 	res.return_code = 0;
@@ -188,13 +195,17 @@ void setVisibility(float* visibility, float newAmt)
 	std::cout << "visibility: " << *visibility << std::endl;
 }
 
-void processInput(GLFWwindow *window, float * visibility)
+void processInput(GLFWwindow *window, float * visibility, glm::vec3 * cam_pos)
 {
 	int altL = glfwGetKey(window, GLFW_KEY_LEFT_ALT);
 	int altR = glfwGetKey(window, GLFW_KEY_RIGHT_ALT);
 	int f4 = glfwGetKey(window, GLFW_KEY_F4);
 	int upArrow = glfwGetKey(window, GLFW_KEY_UP);
 	int dnArrow = glfwGetKey(window, GLFW_KEY_DOWN);
+	int w = glfwGetKey(window, GLFW_KEY_W);
+	int a = glfwGetKey(window, GLFW_KEY_A);
+	int s = glfwGetKey(window, GLFW_KEY_S);
+	int d = glfwGetKey(window, GLFW_KEY_D);
 
 	if ((altL == GLFW_PRESS || altR == GLFW_PRESS) && f4 == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
@@ -204,9 +215,21 @@ void processInput(GLFWwindow *window, float * visibility)
 	else if (dnArrow == GLFW_PRESS) {
 		setVisibility(visibility, *visibility + 0.01f);
 	}
+	if (w == GLFW_PRESS) {
+		cam_pos->y += 0.1f;
+	}
+	else if (s == GLFW_PRESS) {
+		cam_pos->y -= 0.1f;
+	}
+	else if (a == GLFW_PRESS) {
+		cam_pos->x -= 0.1f;
+	}
+	else if (d == GLFW_PRESS) {
+		cam_pos->x += 0.1f;
+	}
 }
 
-bool createTexture(char const * img_name, GLuint texobj_id )
+bool createTexture(char const * img_name, GLuint texobj_id)
 {
 	glBindTexture(GL_TEXTURE_2D, texobj_id);
 	// Set options
@@ -221,7 +244,7 @@ bool createTexture(char const * img_name, GLuint texobj_id )
 	img_data = stbi_load(img_name, &width, &height, &nrChannels, 0);
 	printf("image \"%s\": width: %d, height: %d, nrChannels: %d", img_name, width, height, nrChannels);
 	if (img_data == NULL) {
-		std::cout << "Fuck. Can't load image \""<< img_name << "\"." << std::endl;
+		std::cout << "Fuck. Can't load image \"" << img_name << "\"." << std::endl;
 		return GL_FALSE;
 	}
 
@@ -261,24 +284,59 @@ int main()
 	glDeleteShader(shaders_res.fragment_shader);
 
 	GLfloat vertices[]{
-		// positions		// colors				// texs
-		.3f, .3f, 0,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,
-		.3f, -.3f, 0,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f,
-		-.3f, -.3f, 0,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,
-		-.3f, .3f, 0,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f,
+		// positions			// colors				// texs
+		.3f, .3f,	.3f,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,
+		.3f, -.3f,	.3f,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f,
+		-.3f, -.3f, .3f,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,
+		-.3f, .3f,	.3f,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f,
+
+		.3f, .3f,  -.3f,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,
+		.3f, -.3f, -.3f,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f,
+		.3f, -.3f,  .3f,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,
+		.3f,  .3f,  .3f,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f,
+
+		.3f, .3f,  -.3f,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,
+		.3f, .3f,   .3f,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f,
+		-.3f, .3f,  .3f,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,
+		-.3f, .3f, -.3f,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f,
+
+		-.3f, .3f,  .3f,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,
+		-.3f, -.3f, .3f,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f,
+		-.3f, -.3f,-.3f,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,
+		-.3f, .3f, -.3f,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f,
+
+		-.3f, .3f, -.3f,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,
+		-.3f, -.3f,-.3f,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f,
+		.3f, -.3f, -.3f,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,
+		.3f, .3f,  -.3f,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f,
+
+		.3f, -.3f,  .3f,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,
+		.3f, -.3f, -.3f,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f,
+		-.3f, -.3f,-.3f,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,
+		-.3f, -.3f, .3f,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f,
 	};
 	GLuint indices[]{
 		0, 1, 2,
 		0, 2, 3,
+		4,5,6,
+		4,6,7,
+		8,9,10,
+		8,10,11,
+		12,13,14,
+		12,14,15,
+		16,17,18,
+		16,18,19,
+		20,21,22,
+		20,22,23,
 	};
-	
+
 	// Create texture
 	GLuint gorgeousImgs[2];
 	glGenTextures(2, gorgeousImgs);
 	// Read texture
 	createTexture("ping.png", gorgeousImgs[0]);
 	createTexture("awesomeface.png", gorgeousImgs[1]);
-	
+
 	// Set Virtual Array Object
 	GLuint VAO;
 	glGenVertexArrays(1, &VAO);
@@ -289,7 +347,7 @@ int main()
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	// Specify what the data in this VBO means. (Set vertex attributes)
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);	// positions #0
-	glEnableVertexAttribArray(0);	
+	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));	// colors #1
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));	// texs #2
@@ -320,47 +378,87 @@ int main()
 	// Polygon mode
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+	// A bunch of cube positions
+	glm::vec3 cube_positions[] = {
+		glm::vec3(0.0f,  0.0f,  0.0f),
+		glm::vec3(2.0f,  5.0f, -15.0f),
+		glm::vec3(-1.5f, -2.2f, -2.5f),
+		glm::vec3(-3.8f, -2.0f, -12.3f),
+		glm::vec3(2.4f, -0.4f, -3.5f),
+		glm::vec3(-1.7f,  3.0f, -7.5f),
+		glm::vec3(1.3f, -2.0f, -2.5f),
+		glm::vec3(1.5f,  2.0f, -2.5f),
+		glm::vec3(1.5f,  0.2f, -1.5f),
+		glm::vec3(-1.3f,  1.0f, -1.5f),
+	};
+
 	auto t_start = std::chrono::high_resolution_clock::now();
 	float visibility(.25f);
+	glm::vec3 cam_pos(0,0,3.0f);
 	// Render loop
 	while (!glfwWindowShouldClose(window)) {
 
 		// input
-		processInput(window, &visibility);
+		processInput(window, &visibility, &cam_pos);
 
 		// rendering
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, gorgeousImgs[0]);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, gorgeousImgs[1]);
-
 		auto t_now = std::chrono::high_resolution_clock::now();
 		float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
 		float x = sin(time * 3.0f);
 		float y = sin(time * 2.0f);
 		float z = sin(time * 1.0f);
 
+		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, gorgeousImgs[0]);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, gorgeousImgs[1]);
+
 		glUniform1f(colorModF, 1.0f);
 		glUniform1f(visibleAmtF, visibility);
 		glBindVertexArray(VAO);
 
 		//1
-		trans = glm::mat4(1.0f);
+		/*trans = glm::mat4(1.0f);
 		trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0));
 		trans = glm::rotate(trans, time, glm::vec3(0.0, 0.0, 1.0));
 		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);*/
 
 		//2
-		trans = glm::mat4(1.0f); // reset it to identity matrix
-		trans = glm::translate(trans, glm::vec3(-0.5f, 0.5f, 0.0f));
-		float scaleAmount = std::abs(cos(time));
-		trans = glm::scale(trans, glm::vec3(scaleAmount, scaleAmount, scaleAmount));
-		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		//trans = glm::mat4(1.0f); // reset it to identity matrix
+		//trans = glm::translate(trans, glm::vec3(-0.5f, 0.5f, 0.0f));
+		//float scaleAmount = std::abs(cos(time));
+		//trans = glm::scale(trans, glm::vec3(scaleAmount, scaleAmount, scaleAmount));
+		//glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+		//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+
+
+		glm::mat4 view = glm::mat4(1.0f);
+		view = glm::translate(view, -1.0f * cam_pos);
+		int viewLoc = glGetUniformLocation(shaders_res.shader_program, "view");
+		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+
+		glm::mat4 projection;
+		float r_angle = 90.0f * std::abs(std::sin(time));
+		projection = glm::perspective(glm::radians(45.0f), WINDOW_WIDTH / WINDOW_HEIGHT, 0.1f, 100.0f);
+		int projectionLoc = glGetUniformLocation(shaders_res.shader_program, "projection");
+		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+		glm::mat4 model;
+		int modelLoc;
+		int len = sizeof(cube_positions) / sizeof(cube_positions[0]);
+		for (int i(0); i < len; ++i) {
+			model = glm::mat4(1.0f);
+			model = glm::translate(model, cube_positions[i]);
+			model = glm::rotate(model, time * glm::radians(-55.0f*(i+1)), glm::vec3(1.0f * i, 0.5f*(i+1), 0.25f*(i+2)));
+			modelLoc = glGetUniformLocation(shaders_res.shader_program, "model");
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+			glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+		}
 
 		// check and call events and swap the buffers
 		glfwSwapBuffers(window);
