@@ -8,6 +8,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "Camera.h"
 
 // Constants
 float const WINDOW_WIDTH(1920);
@@ -18,6 +19,10 @@ void framebufferSizeCallback(GLFWwindow* window, int width, int height)
 {
 	glViewport(100, 100, width - 200, height - 200);
 }
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 struct init_res
 {
@@ -61,9 +66,14 @@ init_res init(void)
 
 	// Register callbacks
 	glfwSetFramebufferSizeCallback(res.window, framebufferSizeCallback);
+	glfwSetCursorPosCallback(res.window, mouse_callback);
+	glfwSetScrollCallback(res.window, scroll_callback);
 
 	// Enable depth buffer
 	glEnable(GL_DEPTH_TEST);
+
+	// No mouse cursor
+	glfwSetInputMode(res.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	res.err_str = "";
 	res.return_code = 0;
@@ -195,39 +205,7 @@ void setVisibility(float* visibility, float newAmt)
 	std::cout << "visibility: " << *visibility << std::endl;
 }
 
-void processInput(GLFWwindow *window, float * visibility, glm::vec3 * cam_pos)
-{
-	int altL = glfwGetKey(window, GLFW_KEY_LEFT_ALT);
-	int altR = glfwGetKey(window, GLFW_KEY_RIGHT_ALT);
-	int f4 = glfwGetKey(window, GLFW_KEY_F4);
-	int upArrow = glfwGetKey(window, GLFW_KEY_UP);
-	int dnArrow = glfwGetKey(window, GLFW_KEY_DOWN);
-	int w = glfwGetKey(window, GLFW_KEY_W);
-	int a = glfwGetKey(window, GLFW_KEY_A);
-	int s = glfwGetKey(window, GLFW_KEY_S);
-	int d = glfwGetKey(window, GLFW_KEY_D);
-
-	if ((altL == GLFW_PRESS || altR == GLFW_PRESS) && f4 == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, true);
-	if (upArrow == GLFW_PRESS) {
-		setVisibility(visibility, *visibility - 0.01f);
-	}
-	else if (dnArrow == GLFW_PRESS) {
-		setVisibility(visibility, *visibility + 0.01f);
-	}
-	if (w == GLFW_PRESS) {
-		cam_pos->y += 0.1f;
-	}
-	else if (s == GLFW_PRESS) {
-		cam_pos->y -= 0.1f;
-	}
-	else if (a == GLFW_PRESS) {
-		cam_pos->x -= 0.1f;
-	}
-	else if (d == GLFW_PRESS) {
-		cam_pos->x += 0.1f;
-	}
-}
+void processInput(GLFWwindow *, float *);
 
 bool createTexture(char const * img_name, GLuint texobj_id)
 {
@@ -263,6 +241,45 @@ bool createTexture(char const * img_name, GLuint texobj_id)
 	glBindTexture(GL_TEXTURE_2D, 0);
 	return GL_TRUE;
 }
+
+glm::mat4 createCameraMat(float camPosX, float camPosY, float camPosZ)
+{
+	glm::vec3 camPos = glm::vec3(camPosX, camPosY, camPosZ);
+	glm::vec3 camTarget = glm::vec3(0.0f, 0.0f, 0.0f);	// direction is camTarget - camPos;
+	glm::vec3 camForward = glm::normalize(camPos - camTarget);
+	glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+	glm::vec3 camRight = glm::normalize(glm::cross(up, camForward));
+	glm::vec3 camUp = glm::normalize(glm::cross(camForward, camRight));
+
+	float arr1[]{
+		camRight.x, camRight.y, camRight.z, 0,
+		camUp.x, camUp.y, camUp.z, 0,
+		camForward.x, camForward.y, camForward.z, 0,
+		0,0,0,1,
+	};
+	float arr2[]{
+		1,0,0,-camPos.x,
+		0,1,0,-camPos.y,
+		0,0,1,-camPos.z,
+		0,0,0,1,
+	};
+	glm::mat4 mat1 = glm::transpose(glm::make_mat4(arr1));
+	glm::mat4 mat2 = glm::transpose(glm::make_mat4(arr2));
+	glm::mat4 lookAt = mat1 * mat2;
+	return lookAt;
+}
+
+float radius(10.0f);
+float mouseSensitivity(1.0f);
+
+// dangerous global variables
+float deltaTime(0.0f);
+float currMousePosX(WINDOW_WIDTH / 2.0f),	prevMousePosX(WINDOW_WIDTH / 2.0f);
+float currMousePosY(WINDOW_HEIGHT / 2.0f),	prevMousePosY(WINDOW_HEIGHT / 2.0f);
+bool firstEntered = true;
+
+// Camera
+Camera cam(glm::vec3(0.0f, 0.0f, 3.0f));
 
 int main()
 {
@@ -378,6 +395,8 @@ int main()
 	// Polygon mode
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+
+
 	// A bunch of cube positions
 	glm::vec3 cube_positions[] = {
 		glm::vec3(0.0f,  0.0f,  0.0f),
@@ -393,21 +412,28 @@ int main()
 	};
 
 	auto t_start = std::chrono::high_resolution_clock::now();
+	float lastTime = 0.0f;
 	float visibility(.25f);
-	glm::vec3 cam_pos(0,0,3.0f);
+
 	// Render loop
 	while (!glfwWindowShouldClose(window)) {
 
-		// input
-		processInput(window, &visibility, &cam_pos);
-
-		// rendering
+		// time and delta time
 		auto t_now = std::chrono::high_resolution_clock::now();
 		float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
-		float x = sin(time * 3.0f);
-		float y = sin(time * 2.0f);
-		float z = sin(time * 1.0f);
+		deltaTime = time - lastTime;
 
+		// input
+		processInput(window, &visibility);
+
+		//// Camera angle
+		//updateCameraAngle(&cam, lastTime == 0.0f);
+
+		/*	float x = sin(time * 3.0f);
+			float y = sin(time * 2.0f);
+			float z = sin(time * 1.0f);*/
+
+			// rendering
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -435,16 +461,17 @@ int main()
 		//glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 		//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-
-
 		glm::mat4 view = glm::mat4(1.0f);
-		view = glm::translate(view, -1.0f * cam_pos);
+		//view = glm::translate(view, -1.0f * glm::vec3(0.0f, 0.0f, 3.0f));
+		//float camX = sin(time) * radius;
+		//float camZ = cos(time) * radius;
+		view = cam.GetViewMatrix();
 		int viewLoc = glGetUniformLocation(shaders_res.shader_program, "view");
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
 		glm::mat4 projection;
 		float r_angle = 90.0f * std::abs(std::sin(time));
-		projection = glm::perspective(glm::radians(45.0f), WINDOW_WIDTH / WINDOW_HEIGHT, 0.1f, 100.0f);
+		projection = glm::perspective(glm::radians(cam.Zoom), WINDOW_WIDTH / WINDOW_HEIGHT, 0.1f, 100.0f);
 		int projectionLoc = glGetUniformLocation(shaders_res.shader_program, "projection");
 		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
@@ -454,7 +481,7 @@ int main()
 		for (int i(0); i < len; ++i) {
 			model = glm::mat4(1.0f);
 			model = glm::translate(model, cube_positions[i]);
-			model = glm::rotate(model, time * glm::radians(-55.0f*(i+1)), glm::vec3(1.0f * i, 0.5f*(i+1), 0.25f*(i+2)));
+			model = glm::rotate(model, time * glm::radians(-55.0f*(i + 1)), glm::vec3(1.0f * i, 0.5f*(i + 1), 0.25f*(i + 2)));
 			modelLoc = glGetUniformLocation(shaders_res.shader_program, "model");
 			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 			glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
@@ -463,6 +490,9 @@ int main()
 		// check and call events and swap the buffers
 		glfwSwapBuffers(window);
 		glfwPollEvents();
+
+		// last time
+		lastTime = time;
 	}
 
 
@@ -471,4 +501,74 @@ int main()
 	return 0;
 }
 
+void processInput(GLFWwindow *window, float * visibility)
+{
+	int altL = glfwGetKey(window, GLFW_KEY_LEFT_ALT);
+	int altR = glfwGetKey(window, GLFW_KEY_RIGHT_ALT);
+	int f4 = glfwGetKey(window, GLFW_KEY_F4);
+	int upArrow = glfwGetKey(window, GLFW_KEY_UP);
+	int dnArrow = glfwGetKey(window, GLFW_KEY_DOWN);
+	int w = glfwGetKey(window, GLFW_KEY_W);
+	int a = glfwGetKey(window, GLFW_KEY_A);
+	int s = glfwGetKey(window, GLFW_KEY_S);
+	int d = glfwGetKey(window, GLFW_KEY_D);
+	int q = glfwGetKey(window, GLFW_KEY_Q);
+	int e = glfwGetKey(window, GLFW_KEY_E);
+
+	float camSpeed(2.5f);
+	camSpeed *= deltaTime;
+	if ((altL == GLFW_PRESS || altR == GLFW_PRESS) && f4 == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, true);
+	if (upArrow == GLFW_PRESS) {
+		//setVisibility(visibility, *visibility - 0.01f);
+		++radius;
+	}
+	else if (dnArrow == GLFW_PRESS) {
+		//setVisibility(visibility, *visibility + 0.01f);
+		--radius;
+	}
+	if (w == GLFW_PRESS) {
+		cam.Translate(glm::vec3(0.0f, 0.0f, 1.0f), camSpeed);
+	}
+	else if (s == GLFW_PRESS) {
+		cam.Translate(glm::vec3(0.0f, 0.0f, -1.0f), camSpeed);
+	}
+	if (a == GLFW_PRESS) {
+		cam.Translate(glm::vec3(-1.0f, 0.0f, 0.0f), camSpeed);
+	}
+	else if (d == GLFW_PRESS) {
+		cam.Translate(glm::vec3(1.0f, 0.0f, 0.0f), camSpeed);
+	}
+	if (q == GLFW_PRESS) {
+		cam.Translate(glm::vec3(0.0f, -1.0f, 0.0f), camSpeed);
+	}
+	else if (e == GLFW_PRESS) {
+		cam.Translate(glm::vec3(0.0f, 1.0f, 0.0f), camSpeed);
+	}
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+	currMousePosX = static_cast<float>(xpos);
+	currMousePosY = static_cast<float>(ypos);
+
+	if (firstEntered) {
+		prevMousePosX = currMousePosX;
+		prevMousePosY = currMousePosY;
+		firstEntered = false;
+	}
+
+	float xoffset = currMousePosX - prevMousePosX;
+	float yoffset = -prevMousePosY + currMousePosY; // reversed since y-coordinates range from bottom to top
+
+	prevMousePosX = currMousePosX;
+	prevMousePosY = currMousePosY;
+
+	cam.UpdateAngle(xoffset, yoffset);
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	cam.UpdateZoom(yoffset);
+}
 
