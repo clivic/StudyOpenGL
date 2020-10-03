@@ -70,11 +70,14 @@ public:
 	{
 		float v = MovementSpeed * deltaTime;
 		dir = glm::normalize(dir);
+		Position += dir * v;
+
+		/*float v = MovementSpeed * deltaTime;
+		dir = glm::normalize(dir);
 
 		Position += (Forward)*dir.z *v;
 		Position += (Up)*dir.y *v;
-		Position += (Right)*dir.x *v;
-
+		Position += (Right)*dir.x *v;*/
 	}
 
 	void UpdateAngle(float xoffset, float yoffset)

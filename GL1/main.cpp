@@ -528,22 +528,28 @@ void processInput(GLFWwindow *window, float * visibility)
 		--radius;
 	}
 	if (w == GLFW_PRESS) {
-		cam.Translate(glm::vec3(0.0f, 0.0f, 1.0f), camSpeed);
+		//cam.Translate(glm::vec3(0.0f, 0.0f, 1.0f), camSpeed);
+		cam.Translate(cam.Forward * 1.0f, camSpeed);
 	}
 	else if (s == GLFW_PRESS) {
-		cam.Translate(glm::vec3(0.0f, 0.0f, -1.0f), camSpeed);
+		//cam.Translate(glm::vec3(0.0f, 0.0f, -1.0f), camSpeed);
+		cam.Translate(cam.Forward * -1.0f, camSpeed);
 	}
 	if (a == GLFW_PRESS) {
-		cam.Translate(glm::vec3(-1.0f, 0.0f, 0.0f), camSpeed);
+		//cam.Translate(glm::vec3(-1.0f, 0.0f, 0.0f), camSpeed);
+		cam.Translate(cam.Right * -1.0f, camSpeed);
 	}
 	else if (d == GLFW_PRESS) {
-		cam.Translate(glm::vec3(1.0f, 0.0f, 0.0f), camSpeed);
+		//cam.Translate(glm::vec3(1.0f, 0.0f, 0.0f), camSpeed);
+		cam.Translate(cam.Right * 1.0f, camSpeed);
 	}
 	if (q == GLFW_PRESS) {
-		cam.Translate(glm::vec3(0.0f, -1.0f, 0.0f), camSpeed);
+		//cam.Translate(glm::vec3(0.0f, -1.0f, 0.0f), camSpeed);
+		cam.Translate(cam.Up * -1.0f, camSpeed);
 	}
 	else if (e == GLFW_PRESS) {
-		cam.Translate(glm::vec3(0.0f, 1.0f, 0.0f), camSpeed);
+		//cam.Translate(glm::vec3(0.0f, 1.0f, 0.0f), camSpeed);
+		cam.Translate(cam.Up * 1.0f, camSpeed);
 	}
 }
 
@@ -559,7 +565,9 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	}
 
 	float xoffset = currMousePosX - prevMousePosX;
-	float yoffset = -prevMousePosY + currMousePosY; // reversed since y-coordinates range from bottom to top
+	float yoffset = prevMousePosY - currMousePosY; 
+
+	//std::printf("currMousePosY: %f, prevMousePosY: %f\n", currMousePosY, prevMousePosY);
 
 	prevMousePosX = currMousePosX;
 	prevMousePosY = currMousePosY;
