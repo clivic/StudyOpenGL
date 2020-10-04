@@ -530,6 +530,7 @@ void processInput(GLFWwindow *window, float * visibility)
 	if (w == GLFW_PRESS) {
 		//cam.Translate(glm::vec3(0.0f, 0.0f, 1.0f), camSpeed);
 		cam.Translate(cam.Forward * 1.0f, camSpeed);
+		//cam.Translate(glm::vec3(cam.Forward.x, 0, cam.Forward.z) * 1.0f, camSpeed);	// Only on the ground
 	}
 	else if (s == GLFW_PRESS) {
 		//cam.Translate(glm::vec3(0.0f, 0.0f, -1.0f), camSpeed);
@@ -577,6 +578,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-	cam.UpdateZoom(yoffset);
+	cam.UpdateZoom(static_cast<float>(yoffset));
 }
 

@@ -46,24 +46,28 @@ public:
 
 	glm::mat4 GetViewMatrix()
 	{
-		return glm::lookAt(Position, Position + Forward, Up);
+		//return glm::lookAt(Position, Position + Forward, Up);
 
-		//float arr1[]{
-		//	Right.x, Right.y, Right.z, 0,
-		//	Up.x, Up.y, Up.z, 0,
-		//	Forward.x, Forward.y, Forward.z, 0,
-		//	0,0,0,1,
-		//};
-		//float arr2[]{
-		//	1,0,0,-Position.x,
-		//	0,1,0,-Position.y,
-		//	0,0,1,-Position.z,
-		//	0,0,0,1,
-		//};
-		//glm::mat4 mat1 = glm::transpose(glm::make_mat4(arr1));
-		//glm::mat4 mat2 = glm::transpose(glm::make_mat4(arr2));
-		//glm::mat4 lookAt = mat1 * mat2;
-		//return lookAt;
+		glm::vec3 zaxis = -Forward;
+		glm::vec3 xaxis = Right;
+		glm::vec3 yaxis = Up;
+
+		float arr1[]{
+			xaxis.x, xaxis.y, xaxis.z, 0,
+			yaxis.x, yaxis.y, yaxis.z, 0,
+			zaxis.x, zaxis.y, zaxis.z, 0,
+			0,0,0,1,
+		};
+		float arr2[]{
+			1,0,0,-Position.x,
+			0,1,0,-Position.y,
+			0,0,1,-Position.z,
+			0,0,0,1,
+		};
+		glm::mat4 mat1 = glm::transpose(glm::make_mat4(arr1));
+		glm::mat4 mat2 = glm::transpose(glm::make_mat4(arr2));
+		glm::mat4 lookAt = mat1 * mat2;
+		return lookAt;
 	}
 
 	void Translate(glm::vec3 dir, float deltaTime)
