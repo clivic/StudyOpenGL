@@ -47,6 +47,9 @@
     <None Include="light_src.vs">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="outline.fs">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stb_image.h">

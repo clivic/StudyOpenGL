@@ -147,6 +147,7 @@
     <None Include="light_src.fs" />
     <None Include="cube_color.vs" />
     <None Include="light_src.vs" />
+    <None Include="outline.fs" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />

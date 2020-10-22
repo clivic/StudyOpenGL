@@ -11,6 +11,7 @@ class Shader
 {
 public:
 	int id;
+	static int fucl;
 	// ------------------------------------------------------------------------
 	Shader(char const * vertex_shader_name, char const * frag_shader_name)
 		:id(-1)

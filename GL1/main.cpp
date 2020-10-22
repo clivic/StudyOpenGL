@@ -74,6 +74,15 @@ init_res init(void)
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 
+	// Enable stencil buffer for the outline
+	glEnable(GL_STENCIL_TEST);
+	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+
+	// Enable face culling (We define clock-wise faces as the "facing" faces so cul GL_FRONT instead of GL_BACK
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_FRONT);
+
 	// No mouse cursor
 	glfwSetInputMode(res.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
@@ -152,6 +161,7 @@ int main()
 	// Read shaders
 	Shader cubeShader("cube_color.vs", "cube_color.fs");
 	Shader lightSrcShader("light_src.vs", "light_src.fs");
+	Shader outlineShader("cube_color.vs", "outline.fs");
 	if (cubeShader.id == -1 || lightSrcShader.id == -1) {
 		return -1;
 	}
@@ -329,36 +339,27 @@ int main()
 		// rendering
 		//glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // Teal color
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f); // Black color
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+		// The cubes will be written onto the stencil buffer. 
+		glStencilFunc(GL_ALWAYS, 1, 0xFF); // all fragments should pass the stencil test
+		glStencilMask(0xFF);	// all fragments update the stencil buffer
 
 		// Cube
 		cubeShader.use();
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, gorgeousImg);
-		//glBindTexture(GL_TEXTURE_2D, gorgeousImgs[0]);
-		//glActiveTexture(GL_TEXTURE1);
-		//glBindTexture(GL_TEXTURE_2D, gorgeousImgs[1]);
-
-		//glUniform1f(colorModF, 1.0f);
-		//glUniform1f(visibleAmtF, visibility);
 		glBindVertexArray(VAO);
 
 		glm::mat4 view = glm::mat4(1.0f);
-		//view = glm::translate(view, -1.0f * glm::vec3(0.0f, 0.0f, 3.0f));
-		//float camX = sin(time) * radius;
-		//float camZ = cos(time) * radius;
 		view = cam.GetViewMatrix();
 		cubeShader.setUniformMat4f("view", view);
-		//int viewLoc = glGetUniformLocation(shaders_res.shader_program, "view");
-		//glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-
+	
 		glm::mat4 projection;
 		float r_angle = 90.0f * std::abs(std::sin(time));
 		projection = glm::perspective(glm::radians(cam.Zoom), WINDOW_WIDTH / WINDOW_HEIGHT, 0.1f, 100.0f);
 		cubeShader.setUniformMat4f("projection", projection);
-		/*int projectionLoc = glGetUniformLocation(shaders_res.shader_program, "projection");
-		glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));*/
-
+	
 		glm::mat4 model;
 		int modelLoc;
 		int len = sizeof(cube_positions) / sizeof(cube_positions[0]);
@@ -367,22 +368,48 @@ int main()
 			model = glm::translate(model, cube_positions[i]);
 			model = glm::rotate(model, time * glm::radians(-55.0f*(i + 1)), glm::vec3(1.0f * i, 0.5f*(i + 1), 0.25f*(i + 2)));
 			cubeShader.setUniformMat4f("model", model);
-			/*modelLoc = glGetUniformLocation(shaders_res.shader_program, "model");
-			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));*/
 			glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 		}
 
-		// Draw light src
-		lightSrcShader.use();
-		lightSrcShader.setUniformMat4f("projection", projection);
-		lightSrcShader.setUniformMat4f("view", view);
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, lightSrcPos);
-		model = glm::scale(model, glm::vec3(0.25f)); // a smaller cube
-		lightSrcShader.setUniformMat4f("model", model);
+		// Draw cube outlines
+		// First disable writting to the stencil buffer
+		glStencilFunc(GL_NOTEQUAL, 1, 0xFF);	// only those != 1 should pass the stencil test
+		glStencilMask(0x00);	// no updating
+		glDisable(GL_DEPTH_TEST);
+		// Then we do the cubes scaled up
+		outlineShader.use();
+		view = glm::mat4(1.0f);
+		view = cam.GetViewMatrix();
+		cubeShader.setUniformMat4f("view", view);
+		r_angle = 90.0f * std::abs(std::sin(time));
+		projection = glm::perspective(glm::radians(cam.Zoom), WINDOW_WIDTH / WINDOW_HEIGHT, 0.1f, 100.0f);
+		cubeShader.setUniformMat4f("projection", projection);
+		len = sizeof(cube_positions) / sizeof(cube_positions[0]);
+		for (int i(0); i < len; ++i) {
+			model = glm::mat4(1.0f);
+			model = glm::translate(model, cube_positions[i]);
+			model = glm::rotate(model, time * glm::radians(-55.0f*(i + 1)), glm::vec3(1.0f * i, 0.5f*(i + 1), 0.25f*(i + 2)));
+			model = glm::scale(model, glm::vec3(1.1f, 1.1f, 1.1f));
+			cubeShader.setUniformMat4f("model", model);
+			glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+		}
+		glBindVertexArray(0);
+		glStencilMask(0xFF);
+		glStencilFunc(GL_ALWAYS, 0, 0xFF);
+		glEnable(GL_DEPTH_TEST);
 
-		glBindVertexArray(lightSrcVAO);
-		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+		// Draw light src
+		//glStencilMask(0x00);
+		//lightSrcShader.use();
+		//lightSrcShader.setUniformMat4f("projection", projection);
+		//lightSrcShader.setUniformMat4f("view", view);
+		//model = glm::mat4(1.0f);
+		//model = glm::translate(model, lightSrcPos);
+		//model = glm::scale(model, glm::vec3(0.25f)); // a smaller cube
+		//lightSrcShader.setUniformMat4f("model", model);
+
+		//glBindVertexArray(lightSrcVAO);
+		//glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
 		// check and call events and swap the buffers
 		glfwSwapBuffers(window);
