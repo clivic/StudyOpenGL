@@ -148,6 +148,9 @@ bool firstEntered = true;
 // Camera
 Camera cam(glm::vec3(0.0f, 0.0f, 3.0f));
 
+// TODO: DEBUG_REMOVE
+int DEBUG_power = 32;
+
 int main()
 {
 	// Init
@@ -167,37 +170,38 @@ int main()
 	}
 
 	// A box
+	GLuint const VET_SIZE(11);
 	GLfloat vertices[]{
-		// positions			// colors (not using)	// texs
-		.3f, .3f,	.3f,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,
-		.3f, -.3f,	.3f,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f,
-		-.3f, -.3f, .3f,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,
-		-.3f, .3f,	.3f,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f,
+		// positions			// colors (not using)	// texs			// normals
+		.3f, .3f,	.3f,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,		0.0f,  0.0f,  1.0f,
+		.3f, -.3f,	.3f,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f,		0.0f,  0.0f,  1.0f,
+		-.3f, -.3f, .3f,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,		0.0f,  0.0f,  1.0f,
+		-.3f, .3f,	.3f,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f,		0.0f,  0.0f,  1.0f,
 
-		.3f, .3f,  -.3f,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,
-		.3f, -.3f, -.3f,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f,
-		.3f, -.3f,  .3f,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,
-		.3f,  .3f,  .3f,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f,
+		.3f, .3f,  -.3f,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,		1.0f,  0.0f,  0.0f,
+		.3f, -.3f, -.3f,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f,		1.0f,  0.0f,  0.0f,
+		.3f, -.3f,  .3f,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,		1.0f,  0.0f,  0.0f,
+		.3f,  .3f,  .3f,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f,		1.0f,  0.0f,  0.0f,
 
-		.3f, .3f,  -.3f,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,
-		.3f, .3f,   .3f,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f,
-		-.3f, .3f,  .3f,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,
-		-.3f, .3f, -.3f,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f,
+		.3f, .3f,  -.3f,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,		0.0f,  1.0f,  0.0f,
+		.3f, .3f,   .3f,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f,		0.0f,  1.0f,  0.0f,
+		-.3f, .3f,  .3f,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,		0.0f,  1.0f,  0.0f,
+		-.3f, .3f, -.3f,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f,		0.0f,  1.0f,  0.0f,
 
-		-.3f, .3f,  .3f,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,
-		-.3f, -.3f, .3f,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f,
-		-.3f, -.3f,-.3f,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,
-		-.3f, .3f, -.3f,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f,
+		-.3f, .3f,  .3f,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,	   -1.0f,  0.0f,  0.0f,
+		-.3f, -.3f, .3f,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f,	   -1.0f,  0.0f,  0.0f,
+		-.3f, -.3f,-.3f,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,	   -1.0f,  0.0f,  0.0f,
+		-.3f, .3f, -.3f,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f,	   -1.0f,  0.0f,  0.0f,
 
-		-.3f, .3f, -.3f,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,
-		-.3f, -.3f,-.3f,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f,
-		.3f, -.3f, -.3f,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,
-		.3f, .3f,  -.3f,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f,
+		-.3f, .3f, -.3f,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,		0.0f,  0.0f, -1.0f,
+		-.3f, -.3f,-.3f,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f,		0.0f,  0.0f, -1.0f,
+		.3f, -.3f, -.3f,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,		0.0f,  0.0f, -1.0f,
+		.3f, .3f,  -.3f,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f,		0.0f,  0.0f, -1.0f,
 
-		.3f, -.3f,  .3f,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,
-		.3f, -.3f, -.3f,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f,
-		-.3f, -.3f,-.3f,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,
-		-.3f, -.3f, .3f,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f,
+		.3f, -.3f,  .3f,		0.0f, 0.0f, 1.0f,		1.0f, 1.0f,		0.0f, -1.0f,  0.0f,
+		.3f, -.3f, -.3f,		1.0f, 0.0f, 0.0f,		1.0f, 0.0f,		0.0f, -1.0f,  0.0f,
+		-.3f, -.3f,-.3f,		1.0f, 0.0f, 0.0f,		0.0f, 0.0f,		0.0f, -1.0f,  0.0f,
+		-.3f, -.3f, .3f,		0.0f, 0.0f, 1.0f,		0.0f, 1.0f,		0.0f, -1.0f,  0.0f,
 	};
 	GLuint indices[]{
 		0, 1, 2,
@@ -233,12 +237,14 @@ int main()
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	// Specify what the data in this VBO means. (Set vertex attributes)
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);	// positions #0
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, VET_SIZE * sizeof(GLfloat), (GLvoid*)0);	// positions #0
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));	// colors #1
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, VET_SIZE * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));	// colors #1
 	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));	// texs #2
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, VET_SIZE * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));	// texs #2
 	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, VET_SIZE * sizeof(GLfloat), (GLvoid*)(8 * sizeof(GLfloat)));	// normals #3
+	glEnableVertexAttribArray(3);
 	GLuint EBO;
 	glGenBuffers(1, &EBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
@@ -256,7 +262,7 @@ int main()
 	// Use the same VBO as the cube
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	// set the vertex attribute 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, VET_SIZE * sizeof(GLfloat), (GLvoid*)0);
 	glEnableVertexAttribArray(0);
 	// Use the same EBO
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
@@ -330,6 +336,15 @@ int main()
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, gorgeousImg);
 		glBindVertexArray(VAO);
+
+		// Set lightSrcPos
+		cubeShader.setUniformVec3f("lightSrcPos", lightSrcPos);
+
+		// Set viewPos
+		cubeShader.setUniformVec3f("viewPos", cam.Position);
+		// DEBUG_REMOVE
+		cubeShader.setUniform1f("DEBUG_power", static_cast<float>(DEBUG_power));
+
 
 		glm::mat4 view = glm::mat4(1.0f);
 		view = cam.GetViewMatrix();
@@ -419,6 +434,8 @@ void processInput(GLFWwindow *window, float * visibility)
 	int d = glfwGetKey(window, GLFW_KEY_D);
 	int q = glfwGetKey(window, GLFW_KEY_Q);
 	int e = glfwGetKey(window, GLFW_KEY_E);
+	int x = glfwGetKey(window, GLFW_KEY_X);
+	int c = glfwGetKey(window, GLFW_KEY_C);
 
 	float camSpeed(2.5f);
 	camSpeed *= deltaTime;
@@ -456,6 +473,18 @@ void processInput(GLFWwindow *window, float * visibility)
 	else if (e == GLFW_PRESS) {
 		//cam.Translate(glm::vec3(0.0f, 1.0f, 0.0f), camSpeed);
 		cam.Translate(cam.Up * 1.0f, camSpeed);
+	}
+
+	// TODO: DEBUG_REMOVE
+	if (x == GLFW_PRESS) {
+		DEBUG_power>>=1;
+		DEBUG_power = glm::max(2, DEBUG_power);
+		std::cout << "DEBUG_power: " << DEBUG_power << std::endl;
+	}
+	else if (c == GLFW_PRESS) {
+		DEBUG_power<<=1;
+		DEBUG_power = glm::min(256, DEBUG_power);
+		std::cout << "DEBUG_power: " << DEBUG_power << std::endl;
 	}
 }
 
